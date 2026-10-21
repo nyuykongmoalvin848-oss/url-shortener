@@ -34,7 +34,7 @@ Increments link click using an inline atomic database update row query
 * Spin up the active development listener
   npm run dev
 
-## ecurity Validation
+## security Validation
 
 validates system safety against SQL injections
 
