@@ -9,7 +9,7 @@ CREATE TABLE links (
 
 CREATE TABLE clicks (
     id SERIAL PRIMARY KEY,
-    link_id INTERGER NOT NULL REFERENCES links(id) ON DELETE CASCADE,
+    link_id INTEGER NOT NULL REFERENCES links(id) ON DELETE CASCADE,
     clicked_at TIMESTAMP NOT NULL DEFAULT now(),
     referer TEXT,
     user_agent TEXT
