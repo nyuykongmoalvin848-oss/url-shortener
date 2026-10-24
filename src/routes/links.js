@@ -80,3 +80,103 @@ router.get('/:code', async (req, res) => {
   }
 });
 
+
+
+
+router.get('/links/:code', async (req, res) => {
+  const { code } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM links WHERE code = \$1', [code]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
+    return res.status(200).json(result.rows[0]);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.get('/links/:code/clicks', async (req, res) => {
+  const { code } = req.params;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const afterId = parseInt(req.query.after, 10) || 0;
+
+  try {
+    const linkCheck = await pool.query('SELECT id FROM links WHERE code = \$1', [code]);
+    if (linkCheck.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
+    
+    const linkId = linkCheck.rows[0].id;
+    const clickQuery = `
+      SELECT id, clicked_at, referrer, user_agent 
+      FROM clicks 
+      WHERE link_id = $1 AND id > $2
+      ORDER BY id ASC
+      LIMIT $3
+    `;
+    const clicks = await pool.query(clickQuery, [linkId, afterId, limit]);
+    
+    const nextCursor = clicks.rows.length > 0 ? clicks.rows[clicks.rows.length - 1].id : null;
+    
+    return res.status(200).json({
+      clicks: clicks.rows,
+      cursor: nextCursor
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.get('/links/:code/clicks.csv', async (req, res) => {
+  const { code } = req.params;
+  const client = await pool.connect();
+  
+  try {
+    const linkCheck = await client.query('SELECT id FROM links WHERE code = \$1', [code]);
+    if (linkCheck.rows.length === 0) {
+      client.release();
+      return res.status(404).json({ error: 'Link not found' });
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="clicks_${code}.csv"`);
+    res.write('id,clicked_at,referrer,user_agent\n');
+
+    const streamQuery = new QueryStream(
+      'SELECT id, clicked_at, referrer, user_agent FROM clicks WHERE link_id = \$1 ORDER BY id ASC',
+      [linkCheck.rows[0].id]
+    );
+
+    const stream = client.query(streamQuery);
+    
+    stream.on('data', (row) => {
+      const escapedReferrer = row.referrer ? `"${row.referrer.replace(/"/g, '""')}"` : '';
+      const escapedUA = row.user_agent ? `"${row.user_agent.replace(/"/g, '""')}"` : '';
+      res.write(`${row.id},${row.clicked_at.toISOString()},${escapedReferrer},${escapedUA}\n`);
+    });
+
+    stream.on('end', () => {
+      res.end();
+      client.release();
+    });
+
+    stream.on('error', (err) => {
+      res.end();
+      client.release();
+    });
+  } catch (err) {
+    client.release();
+    if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.delete('/links/:code', async (req, res) => {
+  const { code } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM links WHERE code = \$1 RETURNING id', [code]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
+    return res.status(204).send();
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
