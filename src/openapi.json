@@ -1,0 +1,49 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "High Concurrency URL Shortener",
+    "version": "1.0.0",
+    "description": "API layout documentation for the resilient relational link management server."
+  },
+  "paths": {
+    "/links": {
+      "post": {
+        "summary": "Generate a short code mapping",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_url"],
+                "properties": {
+                  "target_url": { "type": "string", "format": "uri" },
+                  "code": { "type": "string", "minLength": 3, "maxLength": 16 },
+                  "expires_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "Invalid properties supplied" },
+          "409": { "description": "Code already exists" }
+        }
+      }
+    },
+    "/{code}": {
+      "get": {
+        "summary": "Resolve redirection mapping and track analytics logging",
+        "parameters": [
+          { "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect execution target" },
+          "404": { "description": "Missing registration details" },
+          "410": { "description": "Expired link deadline reached" }
+        }
+      }
+    }
+  }
+}

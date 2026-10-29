@@ -1,10 +1,18 @@
-import pg from 'pg';
-import dotenv from 'dotenv';
 
-dotenv.config();
+import pg from "pg";
+import "dotenv/config";
 
-export const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+const { Pool } = pg;
+
+export const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    max: Number(process.env.DB_POOL_MAX || 10),
 });
 
-export const query = (text, params) => pool.query(text, params);
+pool.on("error", (error) => {
+    console.error("Unexpected PostgreSQL pool error:", error.message);
+});

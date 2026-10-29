@@ -7,7 +7,7 @@ import QueryStream from 'pg-query-stream';
 export const router = Router();
 
 
-const generateRandomCode = () => crypto.randomBytes(5).toString('hex'); // 10 alphanumeric chars
+const generateRandomCode = () => crypto.randomBytes(5).toString('hex');
 
 
 router.post('/links', async (req, res) => {
@@ -36,57 +36,10 @@ router.post('/links', async (req, res) => {
 });
 
 
-router.get('/:code', async (req, res) => {
-  const { code } = req.params;
-  const client = await pool.connect();
-  
-  try {
-    await client.query('BEGIN');
-    
-    
-    const updateQuery = `
-      UPDATE links 
-      SET click_count = click_count + 1 
-      WHERE code = $1 AND (expires_at IS NULL OR expires_at > now())
-      RETURNING *
-    `;
-    const updateResult = await client.query(updateQuery, [code]);
-
-    if (updateResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      
-
-      const checkResult = await client.query('SELECT expires_at FROM links WHERE code = \$1', [code]);
-      if (checkResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Unknown code' });
-      }
-      return res.status(410).json({ error: 'Expired' });
-    }
-
-    const link = updateResult.rows[0];
-    const insertClickQuery = `
-      INSERT INTO clicks (link_id, referrer, user_agent)
-      VALUES ($1, $2, $3)
-    `;
-    await client.query(insertClickQuery, [link.id, req.get('referrer') || null, req.get('user-agent') || null]);
-    
-    await client.query('COMMIT');
-    return res.redirect(302, link.target_url);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    return res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    client.release();
-  }
-});
-
-
-
-
 router.get('/links/:code', async (req, res) => {
   const { code } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM links WHERE code = \$1', [code]);
+    const result = await pool.query('SELECT * FROM links WHERE code = $1', [code]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
     return res.status(200).json(result.rows[0]);
   } catch (err) {
@@ -101,12 +54,12 @@ router.get('/links/:code/clicks', async (req, res) => {
   const afterId = parseInt(req.query.after, 10) || 0;
 
   try {
-    const linkCheck = await pool.query('SELECT id FROM links WHERE code = \$1', [code]);
+    const linkCheck = await pool.query('SELECT id FROM links WHERE code = $1', [code]);
     if (linkCheck.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
     
     const linkId = linkCheck.rows[0].id;
     const clickQuery = `
-      SELECT id, clicked_at, referrer, user_agent 
+      SELECT id, clicked_at, referer, user_agent 
       FROM clicks 
       WHERE link_id = $1 AND id > $2
       ORDER BY id ASC
@@ -131,7 +84,7 @@ router.get('/links/:code/clicks.csv', async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const linkCheck = await client.query('SELECT id FROM links WHERE code = \$1', [code]);
+    const linkCheck = await client.query('SELECT id FROM links WHERE code = $1', [code]);
     if (linkCheck.rows.length === 0) {
       client.release();
       return res.status(404).json({ error: 'Link not found' });
@@ -139,17 +92,17 @@ router.get('/links/:code/clicks.csv', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="clicks_${code}.csv"`);
-    res.write('id,clicked_at,referrer,user_agent\n');
+    res.write('id,clicked_at,referer,user_agent\n');
 
     const streamQuery = new QueryStream(
-      'SELECT id, clicked_at, referrer, user_agent FROM clicks WHERE link_id = \$1 ORDER BY id ASC',
+      'SELECT id, clicked_at, referer, user_agent FROM clicks WHERE link_id = $1 ORDER BY id ASC',
       [linkCheck.rows[0].id]
     );
 
     const stream = client.query(streamQuery);
     
     stream.on('data', (row) => {
-      const escapedReferrer = row.referrer ? `"${row.referrer.replace(/"/g, '""')}"` : '';
+      const escapedReferrer = row.referer ? `"${row.referer.replace(/"/g, '""')}"` : '';
       const escapedUA = row.user_agent ? `"${row.user_agent.replace(/"/g, '""')}"` : '';
       res.write(`${row.id},${row.clicked_at.toISOString()},${escapedReferrer},${escapedUA}\n`);
     });
@@ -173,10 +126,55 @@ router.get('/links/:code/clicks.csv', async (req, res) => {
 router.delete('/links/:code', async (req, res) => {
   const { code } = req.params;
   try {
-    const result = await pool.query('DELETE FROM links WHERE code = \$1 RETURNING id', [code]);
+    const result = await pool.query('DELETE FROM links WHERE code = $1 RETURNING id', [code]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Link not found' });
     return res.status(204).send();
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.get('/:code', async (req, res) => {
+  const { code } = req.params;
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    
+    const updateQuery = `
+      UPDATE links 
+      SET click_count = click_count + 1 
+      WHERE code = $1 AND (expires_at IS NULL OR expires_at > now())
+      RETURNING *
+    `;
+    const updateResult = await client.query(updateQuery, [code]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      
+
+      const checkResult = await client.query('SELECT expires_at FROM links WHERE code = $1', [code]);
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Unknown code' });
+      }
+      return res.status(410).json({ error: 'Expired' });
+    }
+
+    const link = updateResult.rows[0];
+    const insertClickQuery = `
+      INSERT INTO clicks (link_id, referer, user_agent)
+      VALUES ($1, $2, $3)
+    `;
+    await client.query(insertClickQuery, [link.id, req.get('referer') || null, req.get('user-agent') || null]);
+    
+    await client.query('COMMIT');
+    return res.redirect(302, link.target_url);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
