@@ -1,0 +1,282 @@
+openapi: 3.0.3
+
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: |
+    Create short links, redirect visitors, track clicks, browse click logs,
+    export click records as CSV, and delete links.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Health
+  - name: Links
+  - name: Clicks
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Check API and database health
+      responses:
+        "200":
+          description: Database connection is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  database:
+                    type: string
+                    example: connected
+        "503":
+          description: Database is unavailable
+
+  /links:
+    post:
+      tags: [Links]
+      summary: Create a short link
+      description: |
+        A code may be supplied to create a custom short link.
+        Otherwise, the API generates one automatically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLink"
+            examples:
+              default:
+                value:
+                  target_url: https://example.com/articles
+              customCode:
+                value:
+                  target_url: https://example.com/articles
+                  code: my-article
+                  expires_at: "2030-01-01T12:00:00Z"
+      responses:
+        "201":
+          description: Short link created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "400":
+          description: Invalid request body
+        "409":
+          description: Short code already exists
+        "500":
+          description: Internal server error
+
+  /links/{code}:
+    parameters:
+      - $ref: "#/components/parameters/Code"
+    get:
+      tags: [Links]
+      summary: Get short-link metadata
+      responses:
+        "200":
+          description: Link metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkMetadata"
+        "404":
+          description: Short link not found
+    delete:
+      tags: [Links]
+      summary: Delete a short link
+      description: Associated click records are deleted as well.
+      responses:
+        "204":
+          description: Short link deleted successfully
+        "404":
+          description: Short link not found
+
+  /links/{code}/clicks:
+    parameters:
+      - $ref: "#/components/parameters/Code"
+    get:
+      tags: [Clicks]
+      summary: List click records
+      description: |
+        Results are ordered by click time and ID, newest first.
+        Pass the returned next_cursor as after to retrieve the next page.
+      parameters:
+        - in: query
+          name: after
+          required: false
+          description: Base64url-encoded pagination cursor from the previous response
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: Number of click records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Click records retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [clicks, next_cursor]
+                properties:
+                  clicks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Click"
+                  next_cursor:
+                    type: string
+                    nullable: true
+        "400":
+          description: Invalid query parameters or cursor
+        "404":
+          description: Short link not found
+
+  /links/{code}/clicks.csv:
+    parameters:
+      - $ref: "#/components/parameters/Code"
+    get:
+      tags: [Clicks]
+      summary: Export click records as CSV
+      description: Streams click records in CSV format.
+      responses:
+        "200":
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename
+          content:
+            text/csv:
+              schema:
+                type: string
+        "404":
+          description: Short link not found
+
+  /{code}:
+    get:
+      tags: [Links]
+      summary: Redirect to the target URL
+      description: Records a click when the link is valid and has not expired.
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "302":
+          description: Redirect to the target URL
+          headers:
+            Location:
+              description: Destination URL
+              schema:
+                type: string
+                format: uri
+        "404":
+          description: Short link not found
+        "410":
+          description: Short link has expired
+
+components:
+  parameters:
+    Code:
+      in: path
+      name: code
+      required: true
+      description: Short-link code
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 16
+        pattern: "^[A-Za-z0-9_-]+$"
+
+  schemas:
+    CreateLink:
+      type: object
+      additionalProperties: false
+      required: [target_url]
+      properties:
+        target_url:
+          type: string
+          format: uri
+          description: Destination URL; HTTP and HTTPS are supported.
+          example: https://example.com/articles
+        code:
+          type: string
+          minLength: 3
+          maxLength: 16
+          pattern: "^[A-Za-z0-9_-]+$"
+        expires_at:
+          type: string
+          format: date-time
+          description: Optional expiry timestamp with a timezone.
+          example: "2030-01-01T12:00:00Z"
+
+    Link:
+      allOf:
+        - $ref: "#/components/schemas/LinkMetadata"
+        - type: object
+          required: [short_url]
+          properties:
+            short_url:
+              type: string
+              format: uri
+
+    LinkMetadata:
+      type: object
+      required:
+        - id
+        - code
+        - target_url
+        - created_at
+        - expires_at
+        - click_count
+      properties:
+        id:
+          type: integer
+          example: 1
+        code:
+          type: string
+          example: my-article
+        target_url:
+          type: string
+          format: uri
+          example: https://example.com/articles
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        click_count:
+          type: integer
+          minimum: 0
+          example: 0
+
+    Click:
+      type: object
+      required: [id, clicked_at, referrer, user_agent]
+      properties:
+        id:
+          type: integer
+        clicked_at:
+          type: string
+          format: date-time
+        referrer:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true

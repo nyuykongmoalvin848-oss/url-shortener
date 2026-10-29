@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_NAME:-url_shortener}"
+      POSTGRES_USER: "${DB_USER:-url_shortener_app}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in your .env file}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      BASE_URL: "${BASE_URL:-http://localhost:3000}"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: "${DB_NAME:-url_shortener}"
+      DB_USER: "${DB_USER:-url_shortener_app}"
+      DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in your .env file}"
+      DB_POOL_MAX: "${DB_POOL_MAX:-10}"
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
