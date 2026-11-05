@@ -10,6 +10,7 @@ export const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   max: Number(process.env.DB_POOL_MAX || 10),
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
 pool.on("error", (error) => {

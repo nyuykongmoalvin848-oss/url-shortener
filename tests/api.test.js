@@ -1,11 +1,12 @@
-import { test, describe, beforeAll, afterAll } from 'node:test';
+import 'dotenv/config'; // 👈 This automatically finds and loads your .env file
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert';
 import app from '../src/app.js';
 import { pool } from '../src/db.js';
 
 describe('URL Shortener Comprehensive Test Suite', () => {
   
-  beforeAll(async () => {
+  before(async () => {
     
     const fs = await import('node:fs');
     const path = await import('node:path');
@@ -14,7 +15,7 @@ describe('URL Shortener Comprehensive Test Suite', () => {
     await pool.query('DELETE FROM links');
   });
 
-  afterAll(async () => {
+  after(async () => {
     await pool.query('DELETE FROM links');
     await pool.query('DELETE FROM clicks');
     await pool.end();
