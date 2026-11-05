@@ -51,4 +51,12 @@ app.use("/links", linksRouter);
 
 app.get("/:code", redirectLinkController);
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: "Malformed JSON payload" });
+  }
+  return res.status(500).json({ error: "Internal server error" });
+});
+
 export default app;
+
