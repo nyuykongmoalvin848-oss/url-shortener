@@ -8,7 +8,7 @@ Increments link click using an inline atomic database update row query
 
 ## Indexed Read-Optimization:
 
- Link lookups hit highly optimized `UNIQUE` keys directly
+Link lookups hit highly optimized `UNIQUE` keys directly
 
 ### Prerequisites
 
@@ -28,10 +28,10 @@ Increments link click using an inline atomic database update row query
 
 ### Execution
 
-* Run the production server
+- Run the production server
   npm start
 
-* Spin up the active development listener
+- Spin up the active development listener
   npm run dev
 
 ## security Validation
