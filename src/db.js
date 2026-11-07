@@ -1,5 +1,8 @@
 import pg from "pg";
-import "dotenv/config";
+
+if (process.env.NODE_ENV !== 'production') {
+  await import('dotenv/config');
+}
 
 const { Pool } = pg;
 
