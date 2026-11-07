@@ -1,10 +1,15 @@
-import "dotenv/config";
+
 import { readFileSync } from "node:fs";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { pool } from "./db.js";
 import linksRouter from "./routes.js";
 import { redirectLinkController } from "./controllers/links.controller.js";
+
+
+if (process.env.NODE_ENV !== 'production') {
+  await import('dotenv/config');
+}
 
 const app = express();
 
