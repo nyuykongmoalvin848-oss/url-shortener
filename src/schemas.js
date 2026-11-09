@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const createLinkSchema = z
   .object({
@@ -27,17 +27,17 @@ export const clickCursorSchema = z.object({
 
 export const clickPaginationQuerySchema = z.object({
   after: z.preprocess(
-    (value) => (value === "" ? undefined : value),
+    (value) => (value === '' ? undefined : value),
     z
       .string()
-      .regex(/^[A-Za-z0-9_-]+$/, "Invalid pagination cursor")
+      .regex(/^[A-Za-z0-9_-]+$/, 'Invalid pagination cursor')
       .optional(),
   ),
   limit: z.preprocess(
-    (value) => (value === undefined ? "20" : value),
+    (value) => (value === undefined ? '20' : value),
     z
       .string()
-      .regex(/^\d+$/, "Limit must be a positive integer")
+      .regex(/^\d+$/, 'Limit must be a positive integer')
       .transform(Number)
       .pipe(z.number().int().min(1).max(100)),
   ),

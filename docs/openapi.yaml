@@ -22,7 +22,7 @@ paths:
       tags: [Health]
       summary: Check API and database health
       responses:
-        "200":
+        '200':
           description: Database connection is healthy
           content:
             application/json:
@@ -35,7 +35,7 @@ paths:
                   database:
                     type: string
                     example: connected
-        "503":
+        '503':
           description: Database is unavailable
 
   /links:
@@ -50,7 +50,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateLink"
+              $ref: '#/components/schemas/CreateLink'
             examples:
               default:
                 value:
@@ -59,49 +59,49 @@ paths:
                 value:
                   target_url: https://example.com/articles
                   code: my-article
-                  expires_at: "2030-01-01T12:00:00Z"
+                  expires_at: '2030-01-01T12:00:00Z'
       responses:
-        "201":
+        '201':
           description: Short link created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Link"
-        "400":
+                $ref: '#/components/schemas/Link'
+        '400':
           description: Invalid request body
-        "409":
+        '409':
           description: Short code already exists
-        "500":
+        '500':
           description: Internal server error
 
   /links/{code}:
     parameters:
-      - $ref: "#/components/parameters/Code"
+      - $ref: '#/components/parameters/Code'
     get:
       tags: [Links]
       summary: Get short-link metadata
       responses:
-        "200":
+        '200':
           description: Link metadata
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LinkMetadata"
-        "404":
+                $ref: '#/components/schemas/LinkMetadata'
+        '404':
           description: Short link not found
     delete:
       tags: [Links]
       summary: Delete a short link
       description: Associated click records are deleted as well.
       responses:
-        "204":
+        '204':
           description: Short link deleted successfully
-        "404":
+        '404':
           description: Short link not found
 
   /links/{code}/clicks:
     parameters:
-      - $ref: "#/components/parameters/Code"
+      - $ref: '#/components/parameters/Code'
     get:
       tags: [Clicks]
       summary: List click records
@@ -125,7 +125,7 @@ paths:
             maximum: 100
             default: 20
       responses:
-        "200":
+        '200':
           description: Click records retrieved
           content:
             application/json:
@@ -136,24 +136,24 @@ paths:
                   clicks:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Click"
+                      $ref: '#/components/schemas/Click'
                   next_cursor:
                     type: string
                     nullable: true
-        "400":
+        '400':
           description: Invalid query parameters or cursor
-        "404":
+        '404':
           description: Short link not found
 
   /links/{code}/clicks.csv:
     parameters:
-      - $ref: "#/components/parameters/Code"
+      - $ref: '#/components/parameters/Code'
     get:
       tags: [Clicks]
       summary: Export click records as CSV
       description: Streams click records in CSV format.
       responses:
-        "200":
+        '200':
           description: CSV export
           headers:
             Content-Disposition:
@@ -164,7 +164,7 @@ paths:
             text/csv:
               schema:
                 type: string
-        "404":
+        '404':
           description: Short link not found
 
   /{code}:
@@ -173,9 +173,9 @@ paths:
       summary: Redirect to the target URL
       description: Records a click when the link is valid and has not expired.
       parameters:
-        - $ref: "#/components/parameters/Code"
+        - $ref: '#/components/parameters/Code'
       responses:
-        "302":
+        '302':
           description: Redirect to the target URL
           headers:
             Location:
@@ -183,9 +183,9 @@ paths:
               schema:
                 type: string
                 format: uri
-        "404":
+        '404':
           description: Short link not found
-        "410":
+        '410':
           description: Short link has expired
 
 components:
@@ -199,7 +199,7 @@ components:
         type: string
         minLength: 3
         maxLength: 16
-        pattern: "^[A-Za-z0-9_-]+$"
+        pattern: '^[A-Za-z0-9_-]+$'
 
   schemas:
     CreateLink:
@@ -216,16 +216,16 @@ components:
           type: string
           minLength: 3
           maxLength: 16
-          pattern: "^[A-Za-z0-9_-]+$"
+          pattern: '^[A-Za-z0-9_-]+$'
         expires_at:
           type: string
           format: date-time
           description: Optional expiry timestamp with a timezone.
-          example: "2030-01-01T12:00:00Z"
+          example: '2030-01-01T12:00:00Z'
 
     Link:
       allOf:
-        - $ref: "#/components/schemas/LinkMetadata"
+        - $ref: '#/components/schemas/LinkMetadata'
         - type: object
           required: [short_url]
           properties:

@@ -1,4 +1,4 @@
-import { pool } from "../db.js";
+import { pool } from '../db.js';
 
 export async function createLink({ code, target_url, expires_at }) {
   const result = await pool.query(
@@ -15,7 +15,7 @@ export async function recordClickForCode(code, { referrer, userAgent }) {
   const client = await pool.connect();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     const linkResult = await client.query(
       `SELECT id, code, target_url, expires_at
@@ -28,8 +28,8 @@ export async function recordClickForCode(code, { referrer, userAgent }) {
     const link = linkResult.rows[0];
 
     if (!link) {
-      await client.query("ROLLBACK");
-      return { status: "not_found" };
+      await client.query('ROLLBACK');
+      return { status: 'not_found' };
     }
 
     const expiresAt = link.expires_at
@@ -37,8 +37,8 @@ export async function recordClickForCode(code, { referrer, userAgent }) {
       : null;
 
     if (expiresAt !== null && expiresAt <= Date.now()) {
-      await client.query("ROLLBACK");
-      return { status: "expired" };
+      await client.query('ROLLBACK');
+      return { status: 'expired' };
     }
 
     const counterResult = await client.query(
@@ -55,10 +55,10 @@ export async function recordClickForCode(code, { referrer, userAgent }) {
       [link.id, referrer ?? null, userAgent ?? null],
     );
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
 
     return {
-      status: "found",
+      status: 'found',
       link: {
         ...link,
         click_count: counterResult.rows[0].click_count,
@@ -66,10 +66,10 @@ export async function recordClickForCode(code, { referrer, userAgent }) {
     };
   } catch (error) {
     try {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK');
     } catch (rollbackError) {
       console.error(
-        "Click transaction rollback failed:",
+        'Click transaction rollback failed:',
         rollbackError.message,
       );
     }

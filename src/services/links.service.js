@@ -4,16 +4,16 @@ import {
   getLinkMetadataByCode,
   listClicksByLinkId,
   deleteLinkByCode,
-} from "../repository/repo.js";
-import { randomBytes } from "node:crypto";
+} from '../repository/repo.js';
+import { randomBytes } from 'node:crypto';
 
 function generateCode(length = 6) {
   const bytes = randomBytes(Math.ceil(length * 0.75));
-  let code = bytes.toString("base64url").replace(/[^A-Za-z0-9_-]/g, "");
+  let code = bytes.toString('base64url').replace(/[^A-Za-z0-9_-]/g, '');
   if (code.length < length) {
     code = randomBytes(length)
-      .toString("base64url")
-      .replace(/[^A-Za-z0-9_-]/g, "")
+      .toString('base64url')
+      .replace(/[^A-Za-z0-9_-]/g, '')
       .slice(0, length);
   }
   return code.slice(0, length);
@@ -43,12 +43,12 @@ function encodeCursor({ clicked_at, id }) {
       clicked_at instanceof Date ? clicked_at.toISOString() : clicked_at,
     id,
   });
-  return Buffer.from(payload).toString("base64url");
+  return Buffer.from(payload).toString('base64url');
 }
 
 function decodeCursor(cursor) {
   try {
-    const json = Buffer.from(cursor, "base64url").toString("utf8");
+    const json = Buffer.from(cursor, 'base64url').toString('utf8');
     return JSON.parse(json);
   } catch {
     return null;
@@ -58,14 +58,14 @@ function decodeCursor(cursor) {
 export async function getShortLinkClicks(code, { after, limit = 20 } = {}) {
   const link = await getLinkMetadataByCode(code);
   if (!link) {
-    return { status: "not_found" };
+    return { status: 'not_found' };
   }
 
   let afterObj = null;
   if (after) {
     afterObj = decodeCursor(after);
     if (!afterObj || !afterObj.clicked_at || !afterObj.id) {
-      return { status: "invalid_cursor" };
+      return { status: 'invalid_cursor' };
     }
   }
 
@@ -83,7 +83,7 @@ export async function getShortLinkClicks(code, { after, limit = 20 } = {}) {
 export async function getShortLinkClickBatches(code) {
   const link = await getLinkMetadataByCode(code);
   if (!link) {
-    return { status: "not_found" };
+    return { status: 'not_found' };
   }
   async function* batches() {
     const batchSize = 1000;
@@ -101,11 +101,11 @@ export async function getShortLinkClickBatches(code) {
       };
     }
   }
-  return { status: "ok", batches: batches() };
+  return { status: 'ok', batches: batches() };
 }
 
 export async function deleteShortLink(code) {
   const result = await deleteLinkByCode(code);
-  if (!result) return { status: "not_found" };
-  return { status: "deleted" };
+  if (!result) return { status: 'not_found' };
+  return { status: 'deleted' };
 }

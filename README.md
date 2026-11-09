@@ -39,7 +39,7 @@ A URL shortener service built with Node.js and PostgreSQL. It features data vali
    cp src/controllers/.env.example src/controllers/.env
 
 3. Provision the database via Docker Compose (applies schema and seed automatically):
-    apply the schema:
+   apply the schema:
 
    psql -U url_shortener_app -d url_shortener -f db/schema.sql
    psql -U url_shortener_app -d url_shortener -f db/seed.sql
@@ -58,20 +58,19 @@ Apply manually:
     psql -U url_shortener_app -d url_shortener -f db/schema.sql
     psql -U url_shortener_app -d url_shortener -f db/seed.sql
 
-
 ## Environment Variables
 
-| Variable | Description | Default |
-|---|---|---|
-| PORT | HTTP listen port | 3000 |
-| BASE_URL | Base URL for short links | derived from request |
-| DB_HOST | PostgreSQL host | localhost |
-| DB_PORT | PostgreSQL port | 5432 |
-| DB_NAME | Database name | url_shortener |
-| DB_USER | Database user | url_shortener_app |
-| DB_PASSWORD | Database password | - |
-| DB_POOL_MAX | Connection pool size | 10 |
-| NODE_ENV | Environment mode | development |
+| Variable    | Description              | Default              |
+| ----------- | ------------------------ | -------------------- |
+| PORT        | HTTP listen port         | 3000                 |
+| BASE_URL    | Base URL for short links | derived from request |
+| DB_HOST     | PostgreSQL host          | localhost            |
+| DB_PORT     | PostgreSQL port          | 5432                 |
+| DB_NAME     | Database name            | url_shortener        |
+| DB_USER     | Database user            | url_shortener_app    |
+| DB_PASSWORD | Database password        | -                    |
+| DB_POOL_MAX | Connection pool size     | 10                   |
+| NODE_ENV    | Environment mode         | development          |
 
 ## Execution
 
@@ -83,17 +82,17 @@ Apply manually:
 
 Base path: `/links`
 
-| Method | Path | Description |
-|---|---|---|
-| POST | /links | Create a short link |
-| GET | /links/:code | Get link metadata |
-| GET | /links/:code/clicks | List clicks (paginated) |
-| GET | /links/:code/clicks.csv | Export clicks as CSV |
-| DELETE | /links/:code | Delete a link |
-| GET | /:code | Redirect to target URL |
-| GET | /health | Health check |
-| GET | /docs | Swagger UI |
-| GET | /docs/openapi.yaml | OpenAPI spec |
+| Method | Path                    | Description             |
+| ------ | ----------------------- | ----------------------- |
+| POST   | /links                  | Create a short link     |
+| GET    | /links/:code            | Get link metadata       |
+| GET    | /links/:code/clicks     | List clicks (paginated) |
+| GET    | /links/:code/clicks.csv | Export clicks as CSV    |
+| DELETE | /links/:code            | Delete a link           |
+| GET    | /:code                  | Redirect to target URL  |
+| GET    | /health                 | Health check            |
+| GET    | /docs                   | Swagger UI              |
+| GET    | /docs/openapi.yaml      | OpenAPI spec            |
 
 ### CSV export
 
