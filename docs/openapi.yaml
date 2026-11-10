@@ -8,8 +8,10 @@ info:
     export click records as CSV, and delete links.
 
 servers:
+  - url: /
+    description: Current Host Environment
   - url: http://localhost:3000
-    description: Local development server
+    description: Local Development
 
 tags:
   - name: Health
