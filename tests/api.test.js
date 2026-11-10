@@ -1,20 +1,27 @@
-import 'dotenv/config'; // 👈 This automatically finds and loads your .env file
+import { config } from 'dotenv';
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert';
-import app from '../src/app.js';
-import { pool } from '../src/db.js';
+
+// Load the test environment file BEFORE importing the app so the
+// connection pool is created against the test database, never .env.
+config({ path: new URL('../.env.test', import.meta.url), override: true });
+
+const app = (await import('../src/app.js')).default;
+const { pool } = await import('../src/db.js');
 
 let server;
 let baseUrl;
 
 describe('URL Shortener Comprehensive Test Suite', () => {
   before(async () => {
-    if (
-      process.env.NODE_ENV === 'production' ||
-      process.env.DB_NAME === 'production_db_name'
-    ) {
+    // CRITICAL SAFETY ABORT: refuse to run against any database that does
+    // not explicitly end in '_test'. This prevents wiping development data.
+    const res = await pool.query('SELECT current_database();');
+    const currentDb = res.rows[0].current_database;
+
+    if (!currentDb.endsWith('_test')) {
       throw new Error(
-        'Refusing to run tests against a live/production database!',
+        `🛑 CRITICAL SAFETY ABORT: Tests must run on a database ending in '_test'. Current DB: ${currentDb}`,
       );
     }
 
@@ -25,6 +32,7 @@ describe('URL Shortener Comprehensive Test Suite', () => {
     );
     await pool.query(schema);
     await pool.query('DELETE FROM links');
+    await pool.query('DELETE FROM clicks');
 
     server = app.listen(0);
     const port = server.address().port;
