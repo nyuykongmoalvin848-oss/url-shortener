@@ -100,18 +100,17 @@ export async function listClicksByLinkId(linkId, { after = null, limit }) {
       `SELECT id, clicked_at, referrer, user_agent
             FROM clicks
             WHERE link_id = $1
-                AND (clicked_at, id) <
-                    ($2::timestamptz, $3::integer)
-            ORDER BY clicked_at DESC, id DESC
-            LIMIT $4`,
-      [linkId, after.clicked_at, after.id, limit],
+                AND id < $2
+            ORDER BY id DESC
+            LIMIT $3`,
+      [linkId, after.id, limit],
     );
   } else {
     result = await pool.query(
       `SELECT id, clicked_at, referrer, user_agent
             FROM clicks
             WHERE link_id = $1
-            ORDER BY clicked_at DESC, id DESC
+            ORDER BY id DESC
             LIMIT $2`,
       [linkId, limit],
     );

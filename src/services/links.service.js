@@ -37,19 +37,19 @@ export async function getShortLinkMetadata(code) {
   return getLinkMetadataByCode(code);
 }
 
-function encodeCursor({ clicked_at, id }) {
-  const payload = JSON.stringify({
-    clicked_at:
-      clicked_at instanceof Date ? clicked_at.toISOString() : clicked_at,
-    id,
-  });
+function encodeCursor({ id }) {
+  const payload = JSON.stringify({ id });
   return Buffer.from(payload).toString('base64url');
 }
 
 function decodeCursor(cursor) {
   try {
     const json = Buffer.from(cursor, 'base64url').toString('utf8');
-    return JSON.parse(json);
+    const obj = JSON.parse(json);
+    if (obj && typeof obj.id === 'number' && Number.isInteger(obj.id) && obj.id > 0) {
+      return { id: obj.id };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -64,20 +64,21 @@ export async function getShortLinkClicks(code, { after, limit = 20 } = {}) {
   let afterObj = null;
   if (after) {
     afterObj = decodeCursor(after);
-    if (!afterObj || !afterObj.clicked_at || !afterObj.id) {
+    if (!afterObj) {
       return { status: 'invalid_cursor' };
     }
   }
 
-  const clicks = await listClicksByLinkId(link.id, { after: afterObj, limit });
+  // Fetch limit + 1 rows to determine if a next page exists.
+  const clicks = await listClicksByLinkId(link.id, { after: afterObj, limit: limit + 1 });
+  const hasMore = clicks.length > limit;
+  const page = hasMore ? clicks.slice(0, limit) : clicks;
   const next_cursor =
-    clicks.length > 0
-      ? encodeCursor({
-          clicked_at: clicks[clicks.length - 1].clicked_at,
-          id: clicks[clicks.length - 1].id,
-        })
+    hasMore
+      ? encodeCursor({ id: page[page.length - 1].id })
       : null;
-  return { clicks, next_cursor };
+
+  return { clicks: page, next_cursor };
 }
 
 export async function getShortLinkClickBatches(code) {
@@ -91,14 +92,14 @@ export async function getShortLinkClickBatches(code) {
     while (true) {
       const batch = await listClicksByLinkId(link.id, {
         after: afterObj,
-        limit: batchSize,
+        limit: batchSize + 1,
       });
       if (batch.length === 0) break;
-      yield batch;
-      afterObj = {
-        clicked_at: batch[batch.length - 1].clicked_at,
-        id: batch[batch.length - 1].id,
-      };
+      const hasMore = batch.length > batchSize;
+      const page = hasMore ? batch.slice(0, batchSize) : batch;
+      yield page;
+      if (!hasMore) break;
+      afterObj = { id: page[page.length - 1].id };
     }
   }
   return { status: 'ok', batches: batches() };
